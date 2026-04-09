@@ -381,7 +381,7 @@
         /* ── Tournament Leaderboard ── */
         .lb-header-row {
             display: flex;
-            padding: 8px 10px;
+            padding: 6px 10px;
             font-size: 10px;
             font-weight: 700;
             color: var(--text-light);
@@ -390,14 +390,16 @@
             background: var(--cream-light);
             border-bottom: 2px solid var(--masters-green);
             align-items: center;
+            min-height: 38px;
         }
 
         .lb-row {
             display: flex;
             align-items: center;
-            padding: 8px 10px;
+            padding: 6px 10px;
             font-size: 13px;
             border-bottom: 1px solid var(--border-light);
+            min-height: 38px;
         }
 
         .lb-row:last-child { border-bottom: none; }
@@ -420,9 +422,9 @@
         }
 
         .lb-team {
-            width: 30px;
+            width: 38px;
             text-align: center;
-            font-size: 8px;
+            font-size: 9px;
             font-weight: 700;
             letter-spacing: 0.3px;
             text-transform: uppercase;
