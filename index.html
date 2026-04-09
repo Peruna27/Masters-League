@@ -465,7 +465,7 @@
         }
 
         .lb-thru {
-            width: 34px;
+            width: 46px;
             text-align: center;
             font-size: 10px;
             color: var(--text-light);
@@ -714,10 +714,11 @@
             return parts[0][0] + '. ' + parts.slice(1).join(' ');
         }
 
-        // "Thru 14" -> "<span>Thru</span><span>14</span>", "F" -> "<span>Thru</span><span>F</span>"
         function fmtThru(val) {
             if (!val || val === '--') return '<span class="lb-thru-label">Thru</span><span class="lb-thru-val">--</span>';
             if (val === 'CUT' || val === 'WD' || val === 'DQ') return '<span class="lb-thru-label">&nbsp;</span><span class="lb-thru-val">' + val + '</span>';
+            // Tee time (contains AM/PM)
+            if (/[AP]M/i.test(val)) return '<span class="lb-thru-label">Tee</span><span class="lb-thru-val">' + val + '</span>';
             const num = val.replace(/^Thru\s*/i, '');
             return '<span class="lb-thru-label">Thru</span><span class="lb-thru-val">' + num + '</span>';
         }
@@ -782,13 +783,14 @@
                         else rounds.push('--');
                     }
 
-                    // Status: Cut, WD, etc
+                    // Status: Cut, WD, or tee time if not started
                     let isCut = false, isWD = false;
                     let thru = thruVal;
                     const st = (p.status || '').toUpperCase();
                     if (st === 'C' || p.pos === 'CUT') { isCut = true; thru = 'CUT'; }
                     else if (st === 'W') { isWD = true; thru = 'WD'; }
                     else if (thruVal === '18' || thruVal === 'F') { thru = 'F'; }
+                    else if (!thruVal && p.teetime) { thru = p.teetime; }
 
                     // Sort order: parse from sort_order field "13|||" -> 13
                     const sortNum = parseInt(p.sort_order) || 999;
