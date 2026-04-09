@@ -377,8 +377,8 @@
         /* ── Tournament Leaderboard ── */
         .lb-header-row {
             display: flex;
-            padding: 6px 8px;
-            font-size: 9px;
+            padding: 8px 10px;
+            font-size: 10px;
             font-weight: 700;
             color: var(--text-light);
             text-transform: uppercase;
@@ -391,8 +391,8 @@
         .lb-row {
             display: flex;
             align-items: center;
-            padding: 7px 8px;
-            font-size: 12px;
+            padding: 8px 10px;
+            font-size: 13px;
             border-bottom: 1px solid var(--border-light);
         }
 
@@ -434,7 +434,7 @@
             font-family: 'Source Serif 4', Georgia, serif;
             font-weight: 800;
             text-transform: uppercase;
-            font-size: 11px;
+            font-size: 12px;
             letter-spacing: 0.2px;
             white-space: nowrap;
             overflow: hidden;
@@ -468,11 +468,11 @@
         }
 
         .lb-score {
-            width: 32px;
+            width: 34px;
             text-align: right;
             font-family: 'Source Serif 4', Georgia, serif;
             font-weight: 900;
-            font-size: 12px;
+            font-size: 13px;
             flex-shrink: 0;
         }
 
@@ -625,6 +625,13 @@
             'https://site.api.espn.com/apis/site/v2/sports/golf/pga/leaderboard',
             'https://site.web.api.espn.com/apis/v2/sports/golf/pga/leaderboard'
         ];
+
+        // "Bryson DeChambeau" -> "B. DeChambeau"
+        function shortName(full) {
+            const parts = full.trim().split(' ');
+            if (parts.length < 2) return full;
+            return parts[0][0] + '. ' + parts.slice(1).join(' ');
+        }
 
         function matchPlayer(espnName) {
             const lower = espnName.toLowerCase();
@@ -909,7 +916,7 @@
                     <div class="lb-row ${p.team ? 'rostered' : ''}">
                         <div class="lb-pos">${p.posDisplay}</div>
                         <div class="lb-team ${p.team ? TEAM_COLORS[p.team] : ''}">${p.team || ''}</div>
-                        <div class="lb-name">${p.name}</div>
+                        <div class="lb-name">${shortName(p.name)}</div>
                         <div class="lb-rounds">${[0,1,2,3].map(r => '<div class="lb-rd">' + (p.rounds[r] || '--') + '</div>').join('')}</div>
                         <div class="lb-thru">${p.thru}</div>
                         <div class="lb-score ${cls(p.scoreToPar)}">${p.scoreDisplay}</div>
