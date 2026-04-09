@@ -420,23 +420,20 @@
             text-transform: uppercase;
             font-size: 13px;
             letter-spacing: 0.3px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
 
-        .lb-team-tag {
+        .lb-team {
+            width: 36px;
+            text-align: center;
             font-size: 9px;
             font-weight: 700;
-            padding: 1px 5px;
-            border-radius: 3px;
             letter-spacing: 0.3px;
             text-transform: uppercase;
         }
 
-        .tag-mike { background: #dbeafe; color: #1d4ed8; }
-        .tag-joe { background: #fce7f3; color: #be185d; }
-        .tag-reed { background: #fef3c7; color: #92400e; }
+        .team-mike { color: #1d4ed8; }
+        .team-joe { color: #be185d; }
+        .team-reed { color: #92400e; }
 
         .lb-rounds {
             display: flex;
@@ -596,7 +593,7 @@
             }
         };
 
-        const TEAM_COLORS = { 'Mike': 'tag-mike', 'Joe': 'tag-joe', 'Reed': 'tag-reed' };
+        const TEAM_COLORS = { 'Mike': 'team-mike', 'Joe': 'team-joe', 'Reed': 'team-reed' };
 
         const searchEntries = [];
         for (const [team, data] of Object.entries(TEAMS)) {
@@ -891,6 +888,7 @@
             el.innerHTML = `
                 <div class="lb-header-row">
                     <div class="lb-pos">Pos</div>
+                    <div class="lb-team">Team</div>
                     <div class="lb-name">Player</div>
                     <div class="lb-rounds">${['R1','R2','R3','R4'].map(r => '<div class="lb-rd">' + r + '</div>').join('')}</div>
                     <div class="lb-thru">Thru</div>
@@ -899,10 +897,8 @@
                 ${rows.map(p => `
                     <div class="lb-row ${p.team ? 'rostered' : ''}">
                         <div class="lb-pos">${p.posDisplay}</div>
-                        <div class="lb-name">
-                            <span>${p.name}</span>
-                            ${p.team ? `<span class="lb-team-tag ${TEAM_COLORS[p.team]}">${p.team}</span>` : ''}
-                        </div>
+                        <div class="lb-team ${p.team ? TEAM_COLORS[p.team] : ''}">${p.team || ''}</div>
+                        <div class="lb-name">${p.name}</div>
                         <div class="lb-rounds">${[0,1,2,3].map(r => '<div class="lb-rd">' + (p.rounds[r] || '--') + '</div>').join('')}</div>
                         <div class="lb-thru">${p.thru}</div>
                         <div class="lb-score ${cls(p.scoreToPar)}">${p.scoreDisplay}</div>
