@@ -701,9 +701,10 @@
         let consecutiveErrors = 0;
         const CACHE_KEY = 'masters_fantasy_2026';
 
-        const ESPN_URLS = [
-            'https://site.api.espn.com/apis/site/v2/sports/golf/pga/leaderboard',
-            'https://site.web.api.espn.com/apis/v2/sports/golf/pga/leaderboard'
+        // Masters.com JSON feed (primary), ESPN API (fallback)
+        const MASTERS_URL = 'https://www.masters.com/en_US/scores/feeds/2026/scores.json';
+        const ESPN_API_URLS = [
+            'https://site.api.espn.com/apis/site/v2/sports/golf/pga/leaderboard'
         ];
 
         // "Bryson DeChambeau" -> "B. DeChambeau"
@@ -760,20 +761,69 @@
             return null;
         }
 
-        function parseCompetitors(data) {
+        // Parse Masters.com JSON feed
+        function parseMastersData(data) {
+            if (!data || !data.data || !data.data.player) return null;
+            const players = data.data.player;
+
+            const parsed = players.map(p => {
+                try {
+                    const name = p.full_name || (p.first_name + ' ' + p.last_name) || 'Unknown';
+                    const scoreToPar = parseScore(p.topar);
+                    const today = p.today || '--';
+                    const thruVal = p.thru || '';
+                    const posDisplay = p.pos || '--';
+
+                    // Round totals
+                    const rounds = [];
+                    for (const rKey of ['round1','round2','round3','round4']) {
+                        const r = p[rKey];
+                        if (r && r.total != null) rounds.push(String(r.total));
+                        else rounds.push('--');
+                    }
+
+                    // Status: Cut, WD, etc
+                    let isCut = false, isWD = false;
+                    let thru = thruVal;
+                    const st = (p.status || '').toUpperCase();
+                    if (st === 'C' || p.pos === 'CUT') { isCut = true; thru = 'CUT'; }
+                    else if (st === 'W') { isWD = true; thru = 'WD'; }
+                    else if (thruVal === '18' || thruVal === 'F') { thru = 'F'; }
+
+                    // Sort order: parse from sort_order field "13|||" -> 13
+                    const sortNum = parseInt(p.sort_order) || 999;
+                    const match = matchPlayer(name);
+
+                    return {
+                        name, scoreToPar, scoreDisplay: fmt(scoreToPar),
+                        today, thru, rounds, position: sortNum,
+                        posDisplay, isCut, isWD,
+                        team: match ? match.team : null,
+                        rosterName: match ? match.playerDef.name : null
+                    };
+                } catch (e) {
+                    console.warn('Skipping malformed player:', e);
+                    return null;
+                }
+            }).filter(Boolean);
+
+            parsed.sort((a, b) => a.position - b.position);
+            return { competitors: parsed, tournamentName: 'Masters Tournament', tournamentStatus: '' };
+        }
+
+        // Parse ESPN API response (fallback)
+        function parseESPNData(data) {
             const event = data.events && data.events[0];
             if (!event) return null;
 
             const competition = event.competitions && event.competitions[0];
             const competitors = competition ? competition.competitors || [] : [];
-            const tournamentName = event.name || '';
-            const tournamentStatus = event.status ? (event.status.type ? event.status.type.description : '') : '';
 
             const parsed = competitors.map(c => {
                 try {
                     const athlete = c.athlete || {};
                     const displayName = athlete.displayName || 'Unknown';
-                    const score = c.score != null ? c.score : (c.statistics && c.statistics[0] ? c.statistics[0].displayValue : 'E');
+                    const score = c.score != null ? c.score : 'E';
                     const scoreToPar = parseScore(typeof score === 'string' ? score : String(score));
 
                     let today = '--';
@@ -789,16 +839,15 @@
                     let thru = '', isCut = false, isWD = false;
                     if (c.status) {
                         const st = c.status;
-                        const desc = st.type ? st.type.description : '';
                         const dv = (st.displayValue || '').toUpperCase();
-                        if (desc === 'Cut' || dv === 'CUT' || dv === 'MC') { thru = 'CUT'; isCut = true; }
-                        else if (desc === 'Withdrawn' || dv === 'WD') { thru = 'WD'; isWD = true; }
-                        else if (desc === 'Disqualified' || dv === 'DQ') { thru = 'DQ'; isWD = true; }
+                        if (dv === 'CUT' || dv === 'MC') { thru = 'CUT'; isCut = true; }
+                        else if (dv === 'WD') { thru = 'WD'; isWD = true; }
+                        else if (dv === 'DQ') { thru = 'DQ'; isWD = true; }
                         else { thru = st.displayValue || ''; }
                     }
 
                     const position = c.sortOrder || 999;
-                    const posDisplay = c.status && c.status.position ? c.status.position.displayName : (isCut ? 'CUT' : '');
+                    const posDisplay = c.status && c.status.position ? c.status.position.displayName : '';
                     const match = matchPlayer(displayName);
 
                     return {
@@ -807,14 +856,11 @@
                         isCut, isWD, team: match ? match.team : null,
                         rosterName: match ? match.playerDef.name : null
                     };
-                } catch (e) {
-                    console.warn('Skipping malformed competitor:', e);
-                    return null;
-                }
+                } catch (e) { return null; }
             }).filter(Boolean);
 
             parsed.sort((a, b) => a.position - b.position);
-            return { competitors: parsed, tournamentName, tournamentStatus };
+            return { competitors: parsed, tournamentName: event.name || '', tournamentStatus: '' };
         }
 
         async function fetchData() {
@@ -823,52 +869,71 @@
             spinner.style.display = 'inline-block';
             refreshText.textContent = 'Loading';
 
-            let raw = null;
+            let result = null;
             let fetchError = null;
 
-            for (const url of ESPN_URLS) {
-                try {
-                    const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
-                    if (!resp.ok) continue;
-                    raw = await resp.json();
-                    break;
-                } catch (e) { fetchError = e; }
+            // 1. Try Masters.com first (best source during tournament)
+            try {
+                const resp = await fetch(MASTERS_URL, { signal: AbortSignal.timeout(10000) });
+                if (resp.ok) {
+                    const raw = await resp.json();
+                    result = parseMastersData(raw);
+                    if (result && result.competitors.length > 0) {
+                        cacheData(raw);
+                        consecutiveErrors = 0;
+                    }
+                }
+            } catch (e) { fetchError = e; }
+
+            // 2. Fallback to ESPN API
+            if (!result || result.competitors.length === 0) {
+                for (const url of ESPN_API_URLS) {
+                    try {
+                        const resp = await fetch(url, { signal: AbortSignal.timeout(10000) });
+                        if (!resp.ok) continue;
+                        const raw = await resp.json();
+                        result = parseESPNData(raw);
+                        if (result && result.competitors.length > 0) {
+                            cacheData(raw);
+                            consecutiveErrors = 0;
+                            break;
+                        }
+                    } catch (e) { fetchError = e; }
+                }
             }
 
-            if (!raw) {
+            // 3. Try cache
+            if (!result || result.competitors.length === 0) {
                 const cached = loadCache();
                 if (cached) {
-                    raw = cached.data;
+                    // Try parsing cached data as Masters format first, then ESPN
+                    result = parseMastersData(cached.data) || parseESPNData(cached.data);
                     const age = Math.round((Date.now() - cached.ts) / 60000);
                     document.getElementById('last-updated').textContent =
                         'Cached (' + age + 'm ago)';
-                } else {
-                    consecutiveErrors++;
-                    const retryIn = Math.min(consecutiveErrors * 30, 300);
-                    if (leaderboardData.length === 0) {
-                        document.getElementById('standings').innerHTML =
-                            '<div class="error-msg">Could not load scores<br><small style="opacity:0.6">' +
-                            (fetchError ? fetchError.message : 'All endpoints failed') +
-                            '</small><br><small style="opacity:0.4">Retrying in ' + retryIn + 's</small>' +
-                            '<br><button class="retry-btn" onclick="fetchData()">Try Now</button></div>';
-                    } else {
-                        document.getElementById('last-updated').textContent = 'Refresh failed';
-                    }
-                    setTimeout(fetchData, retryIn * 1000);
-                    spinner.style.display = 'none';
-                    refreshText.textContent = 'Refresh';
-                    return;
                 }
-            } else {
-                cacheData(raw);
-                consecutiveErrors = 0;
+            }
+
+            // 4. Nothing worked
+            if (!result || result.competitors.length === 0) {
+                consecutiveErrors++;
+                const retryIn = Math.min(consecutiveErrors * 30, 300);
+                if (leaderboardData.length === 0) {
+                    document.getElementById('standings').innerHTML =
+                        '<div class="error-msg">Could not load scores<br><small style="opacity:0.6">' +
+                        (fetchError ? fetchError.message : 'All sources failed') +
+                        '</small><br><small style="opacity:0.4">Retrying in ' + retryIn + 's</small>' +
+                        '<br><button class="retry-btn" onclick="fetchData()">Try Now</button></div>';
+                } else {
+                    document.getElementById('last-updated').textContent = 'Refresh failed';
+                }
+                setTimeout(fetchData, retryIn * 1000);
+                spinner.style.display = 'none';
+                refreshText.textContent = 'Refresh';
+                return;
             }
 
             try {
-                const result = parseCompetitors(raw);
-                if (!result || result.competitors.length === 0) {
-                    throw new Error('No competitors found');
-                }
 
                 leaderboardData = result.competitors;
 
