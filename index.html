@@ -405,11 +405,8 @@
         .lb-row:last-child { border-bottom: none; }
 
         .lb-row.rostered {
-            background: rgba(200, 169, 81, 0.08);
-        }
-
-        .lb-row:nth-child(even):not(.rostered) {
-            background: var(--cream-light);
+            background: rgba(0, 103, 71, 0.08);
+            border-left: 3px solid var(--masters-green);
         }
 
         .lb-pos {
@@ -724,7 +721,8 @@
         }
 
         function matchPlayer(espnName) {
-            const lower = espnName.toLowerCase();
+            // Normalize accented chars so Åberg matches aberg, etc.
+            const lower = espnName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             for (const entry of searchEntries) {
                 if (lower.includes(entry.term)) return { team: entry.team, playerDef: entry.playerDef };
             }
