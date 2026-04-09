@@ -333,7 +333,11 @@
         .player-thru {
             width: 40px;
             text-align: center;
-            font-size: 11px;
+            font-size: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.2;
             color: var(--text-light);
             font-weight: 500;
         }
@@ -465,6 +469,23 @@
             color: var(--text-light);
             font-weight: 500;
             flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.2;
+        }
+
+        .lb-thru-label {
+            font-size: 7px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-light);
+            font-weight: 600;
+        }
+
+        .lb-thru-val {
+            font-size: 10px;
+            font-weight: 600;
         }
 
         .lb-score {
@@ -631,6 +652,14 @@
             const parts = full.trim().split(' ');
             if (parts.length < 2) return full;
             return parts[0][0] + '. ' + parts.slice(1).join(' ');
+        }
+
+        // "Thru 14" -> "<span>Thru</span><span>14</span>", "F" -> "<span>Thru</span><span>F</span>"
+        function fmtThru(val) {
+            if (!val || val === '--') return '<span class="lb-thru-label">Thru</span><span class="lb-thru-val">--</span>';
+            if (val === 'CUT' || val === 'WD' || val === 'DQ') return '<span class="lb-thru-label">&nbsp;</span><span class="lb-thru-val">' + val + '</span>';
+            const num = val.replace(/^Thru\s*/i, '');
+            return '<span class="lb-thru-label">Thru</span><span class="lb-thru-val">' + num + '</span>';
         }
 
         function matchPlayer(espnName) {
@@ -888,9 +917,9 @@
                                     <div class="player-row ${rowCls}">
                                         <div class="player-pos">${p.posDisplay}</div>
                                         <div class="player-dot"></div>
-                                        <div class="player-name">${p.name}</div>
+                                        <div class="player-name">${shortName(p.name)}</div>
                                         <div class="player-rounds">${[0,1,2,3].map(r => '<div class="player-rd">' + (p.rounds[r] || '--') + '</div>').join('')}</div>
-                                        <div class="player-thru">${p.thru}</div>
+                                        <div class="player-thru">${fmtThru(p.thru)}</div>
                                         <div class="player-score ${cls(p.scoreToPar)}">${p.scoreDisplay}</div>
                                     </div>`;
                             }).join('')}
@@ -918,7 +947,7 @@
                         <div class="lb-team ${p.team ? TEAM_COLORS[p.team] : ''}">${p.team || ''}</div>
                         <div class="lb-name">${shortName(p.name)}</div>
                         <div class="lb-rounds">${[0,1,2,3].map(r => '<div class="lb-rd">' + (p.rounds[r] || '--') + '</div>').join('')}</div>
-                        <div class="lb-thru">${p.thru}</div>
+                        <div class="lb-thru">${fmtThru(p.thru)}</div>
                         <div class="lb-score ${cls(p.scoreToPar)}">${p.scoreDisplay}</div>
                     </div>`).join('')}`;
         }
