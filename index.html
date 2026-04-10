@@ -1063,7 +1063,7 @@
                                         <div class="player-name">${shortName(p.name)}</div>
                                         <div class="player-rounds">${[0,1,2,3].map(r => '<div class="player-rd">' + (p.rounds[r] || '--') + '</div>').join('')}</div>
                                         <div class="player-thru">${fmtThru(p.thru)}</div>
-                                        <div class="player-today">${p.today || '--'}</div>
+                                        <div class="player-today ${cls(parseScore(p.today))}">${p.today || '--'}</div>
                                         <div class="player-score ${cls(p.scoreToPar)}">${p.scoreDisplay}</div>
                                     </div>`;
                             }).join('')}
@@ -1093,7 +1093,7 @@
                         <div class="lb-name">${shortName(p.name)}</div>
                         <div class="lb-rounds">${[0,1,2,3].map(r => '<div class="lb-rd">' + (p.rounds[r] || '--') + '</div>').join('')}</div>
                         <div class="lb-thru">${fmtThru(p.thru)}</div>
-                        <div class="lb-today">${p.today || '--'}</div>
+                        <div class="lb-today ${cls(parseScore(p.today))}">${p.today || '--'}</div>
                         <div class="lb-score ${cls(p.scoreToPar)}">${p.scoreDisplay}</div>
                     </div>`).join('')}`;
         }
