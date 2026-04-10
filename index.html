@@ -821,8 +821,9 @@
                     else if (thruVal === '18' || thruVal === 'F') { thru = 'F'; }
                     else if (!thruVal && p.teetime) { thru = p.teetime; }
 
-                    // Sort order: parse from sort_order field "13|||" -> 13
-                    const sortNum = parseInt(p.sort_order) || 999;
+                    // Sort order: "1|3||" -> second number (3) is leaderboard rank
+                    const soParts = (p.sort_order || '').split('|');
+                    const sortNum = (soParts.length > 1 && soParts[1]) ? parseInt(soParts[1]) : (parseInt(soParts[0]) || 999);
                     const match = matchPlayer(name);
 
                     return {
