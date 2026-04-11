@@ -821,9 +821,11 @@
                     else if (thruVal === '18' || thruVal === 'F') { thru = 'F'; }
                     else if (!thruVal && p.teetime) { thru = p.teetime; }
 
-                    // Sort order: "1|3||" -> second number (3) is leaderboard rank
+                    // Use pos field for sort (T4 -> 4, CUT -> 999)
+                    const posNum = parseInt((posDisplay || '').replace(/\D/g, '')) || 999;
+                    // Use third sort_order part as tiebreaker within same position
                     const soParts = (p.sort_order || '').split('|');
-                    const sortNum = (soParts.length > 1 && soParts[1]) ? parseInt(soParts[1]) : (parseInt(soParts[0]) || 999);
+                    const sortNum = posNum * 1000 + (parseInt(soParts[2]) || parseInt(soParts[0]) || 0);
                     const match = matchPlayer(name);
 
                     return {
